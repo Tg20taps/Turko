@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="76" fill="#FFD447"/>
+  <text
+    x="256"
+    y="264"
+    fill="#0B0F14"
+    dominant-baseline="middle"
+    font-family="Inter, Arial, sans-serif"
+    font-size="168"
+    font-weight="900"
+    letter-spacing="0"
+    text-anchor="middle"
+  >RT</text>
+</svg>
