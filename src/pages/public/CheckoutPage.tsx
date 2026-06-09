@@ -60,7 +60,7 @@ export function CheckoutPage() {
           {/* Izquierda: formulario o estado vacío */}
           <section className="h-full">
             {lines.length ? (
-              <CheckoutForm isSubmitting={isSubmitting} onSubmit={handleSubmit} />
+              <CheckoutForm isSubmitting={isSubmitting} onSubmit={handleSubmit} error={error} />
             ) : (
               <div className="rounded-lg border border-dashed border-flame/24 bg-coal p-8 text-center">
                 <ShoppingBag className="mx-auto h-10 w-10 text-flame" />
@@ -71,7 +71,6 @@ export function CheckoutPage() {
                 </Button>
               </div>
             )}
-            {error ? <p className="mt-4 rounded-md bg-ember/20 p-3 text-sm text-red-100">{error}</p> : null}
           </section>
 
           {/* Derecha: resumen estático, siempre al mismo nivel */}

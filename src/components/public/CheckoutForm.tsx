@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, Fragment, useMemo, useState } from 'react';
 import { ChevronRight, MapPin } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { formatCurrency } from '../../lib/format';
@@ -13,6 +13,7 @@ type Props = {
   formId?: string;
   submitLabel?: string;
   hideSubmit?: boolean;
+  error?: string | null;
 };
 
 const initialForm: CheckoutCustomer = {
@@ -37,6 +38,7 @@ export function CheckoutForm({
   formId,
   submitLabel = 'Confirmar pedido',
   hideSubmit = false,
+  error = null,
 }: Props) {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,12 +53,23 @@ export function CheckoutForm({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const nextErrors: Record<string, string> = {};
-    if (!form.customerName.trim()) nextErrors.customerName = 'Necesitamos tu nombre.';
-    if (!form.customerPhone.trim()) nextErrors.customerPhone = 'Ingresa un WhatsApp de contacto.';
+    if (!form.customerName.trim()) {
+      nextErrors.customerName = 'Necesitamos tu nombre.';
+    }
+
+    const digitsOnly = form.customerPhone.replace(/\D/g, '');
+    if (!digitsOnly) {
+      nextErrors.customerPhone = 'Ingresa un WhatsApp de contacto.';
+    } else if (digitsOnly.length !== 8) {
+      nextErrors.customerPhone = 'El número debe tener exactamente 8 dígitos.';
+    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
-    await onSubmit({ ...form, acceptsPickup: true });
+
+    // Prefijar +569 internamente antes de enviar
+    const fullPhone = `+569${digitsOnly}`;
+    await onSubmit({ ...form, customerPhone: fullPhone, acceptsPickup: true });
   }
 
   return (
@@ -86,13 +99,31 @@ export function CheckoutForm({
           placeholder="Ej: Camila"
           error={errors.customerName}
         />
-        <Input
-          label="Teléfono / WhatsApp"
-          value={form.customerPhone}
-          onChange={(event) => update('customerPhone', event.target.value)}
-          placeholder="Ej: +56 9 1234 5678"
-          error={errors.customerPhone}
-        />
+        <label className="grid gap-2 text-sm font-semibold text-cream">
+          Teléfono / WhatsApp
+          <div className="relative flex items-center">
+            <span className="absolute left-3 text-base font-bold text-cream/50 pointer-events-none select-none">
+              +56 9
+            </span>
+            <input
+              type="tel"
+              value={form.customerPhone}
+              onChange={(event) => {
+                const val = event.target.value.replace(/\D/g, '').slice(0, 8);
+                update('customerPhone', val);
+              }}
+              placeholder="1234 5678"
+              className={`h-12 w-full rounded-md border bg-ink/75 pl-16 pr-3 text-base text-cream outline-none transition placeholder:text-cream/35 focus:border-flame focus:ring-2 focus:ring-flame/25 ${
+                errors.customerPhone
+                  ? 'border-red-400 focus:border-red-400 focus:ring-red-400/25'
+                  : 'border-flame/14 focus:border-flame'
+              }`}
+            />
+          </div>
+          {errors.customerPhone ? (
+            <span className="text-xs font-medium text-red-200">{errors.customerPhone}</span>
+          ) : null}
+        </label>
       </div>
 
       <Textarea
@@ -109,10 +140,9 @@ export function CheckoutForm({
           <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-white/35">¿Qué pasa después?</p>
           <div className="flex items-center">
             {steps.map((step, i) => (
-              <>
+              <Fragment key={step.n}>
                 {/* Card de paso */}
                 <div
-                  key={step.n}
                   className="flex flex-1 flex-col items-center gap-1 rounded-lg border border-white/10 bg-white/5 p-2 text-center"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C69635] text-[9px] font-black text-[#07111A]">
@@ -124,9 +154,9 @@ export function CheckoutForm({
 
                 {/* Flecha conectora (excepto después del último) */}
                 {i < steps.length - 1 && (
-                  <ChevronRight key={`arrow-${i}`} className="mx-0.5 h-3.5 w-3.5 shrink-0 text-[#C69635]" />
+                  <ChevronRight className="mx-0.5 h-3.5 w-3.5 shrink-0 text-[#C69635]" />
                 )}
-              </>
+              </Fragment>
             ))}
           </div>
         </div>
@@ -146,6 +176,12 @@ export function CheckoutForm({
             </div>
           </div>
 
+          {error && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center text-sm font-bold text-red-200">
+              {error}
+            </div>
+          )}
+
           {!hideSubmit ? (
             <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
               {isSubmitting ? 'Confirmando pedido...' : submitLabel}
@@ -154,6 +190,11 @@ export function CheckoutForm({
         </div>
       ) : (
         <>
+          {error && (
+            <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-center text-sm font-bold text-red-200">
+              {error}
+            </div>
+          )}
           {!hideSubmit ? (
             <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting ? 'Confirmando pedido...' : submitLabel}

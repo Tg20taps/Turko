@@ -124,4 +124,4 @@ using (exists (select 1 from public.admin_profiles where id = auth.uid()));
 
 create policy "admins can read profiles"
 on public.admin_profiles for select
-using (id = auth.uid() or exists (select 1 from public.admin_profiles where id = auth.uid()));
+using (id = auth.uid());

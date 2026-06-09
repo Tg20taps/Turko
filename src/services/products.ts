@@ -84,6 +84,7 @@ export async function updateProduct(productId: string, update: ProductUpdate) {
       })
       .eq('id', productId);
     if (error) throw error;
+    broadcastCatalogUpdate();
     return;
   }
 
@@ -128,6 +129,7 @@ export async function addProduct(product: Omit<Product, 'id' | 'slug' | 'categor
       sort_order: product.sortOrder,
     });
     if (error) throw error;
+    broadcastCatalogUpdate();
     return newProduct;
   }
 
@@ -140,6 +142,7 @@ export async function deleteProduct(productId: string) {
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.from('products').delete().eq('id', productId);
     if (error) throw error;
+    broadcastCatalogUpdate();
     return;
   }
 
@@ -245,6 +248,7 @@ export async function addCategory(name: string, description: string): Promise<Ca
       .select()
       .single();
     if (error) throw error;
+    broadcastCatalogUpdate();
     return { ...newCat, id: data.id };
   }
 
