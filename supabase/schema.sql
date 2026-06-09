@@ -95,7 +95,7 @@ with check (exists (select 1 from public.admin_profiles where id = auth.uid()));
 
 create policy "clients can create orders"
 on public.orders for insert
-with check (pickup_type = 'retiro');
+with check (true);
 
 create policy "admins can read orders"
 on public.orders for select
