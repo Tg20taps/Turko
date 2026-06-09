@@ -7,6 +7,7 @@ import { StatusBadge } from '../../components/admin/StatusBadge';
 
 export function AdminDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [timeRange, setTimeRange] = useState<'hoy' | 'semana' | 'mes' | 'todo'>('hoy');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -15,21 +16,37 @@ export function AdminDashboardPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const todayOrders = useMemo(() => {
-    const today = new Date().toDateString();
-    return orders.filter((order) => new Date(order.createdAt).toDateString() === today);
-  }, [orders]);
+  const filteredOrdersByRange = useMemo(() => {
+    const now = new Date();
+    return orders.filter((order) => {
+      const orderDate = new Date(order.createdAt);
+      if (timeRange === 'hoy') {
+        return orderDate.toDateString() === now.toDateString();
+      }
+      if (timeRange === 'semana') {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(now.getDate() - 7);
+        return orderDate >= oneWeekAgo;
+      }
+      if (timeRange === 'mes') {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(now.getDate() - 30);
+        return orderDate >= oneMonthAgo;
+      }
+      return true; // 'todo'
+    });
+  }, [orders, timeRange]);
 
   const metrics = [
     {
-      label: 'Pedidos hoy',
-      value: todayOrders.length.toString(),
+      label: 'Pedidos en rango',
+      value: filteredOrdersByRange.length.toString(),
       icon: ClipboardList,
       tone: 'text-flame',
     },
     {
       label: 'Venta estimada',
-      value: formatCurrency(todayOrders.reduce((sum, order) => sum + order.total, 0)),
+      value: formatCurrency(filteredOrdersByRange.reduce((sum, order) => sum + order.total, 0)),
       icon: DollarSign,
       tone: 'text-emerald-200',
     },
@@ -49,19 +66,40 @@ export function AdminDashboardPage() {
 
   const bestSellers = useMemo(() => {
     const counts = new Map<string, number>();
-    orders.forEach((order) => {
+    filteredOrdersByRange.forEach((order) => {
       order.items.forEach((item) => {
         counts.set(item.productName, (counts.get(item.productName) ?? 0) + item.quantity);
       });
     });
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [orders]);
+  }, [filteredOrdersByRange]);
 
   return (
     <div className="grid gap-6">
-      <section>
-        <p className="text-sm font-black uppercase text-flame">Resumen del día</p>
-        <h2 className="mt-2 text-3xl font-black">Operación en vivo</h2>
+      <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <p className="text-sm font-black uppercase text-flame">Resumen de operaciones</p>
+          <h2 className="mt-2 text-3xl font-black">Operación en vivo</h2>
+        </div>
+        <div className="no-scrollbar flex gap-1 overflow-x-auto rounded-lg bg-coal p-1">
+          {(['hoy', 'semana', 'mes', 'todo'] as const).map((range) => {
+            const labels = { hoy: 'Hoy', semana: '7 días', mes: '30 días', todo: 'Todo' };
+            return (
+              <button
+                key={range}
+                type="button"
+                onClick={() => setTimeRange(range)}
+                className={`rounded-md px-3 py-1.5 text-xs font-bold transition active:scale-95 ${
+                  timeRange === range
+                    ? 'bg-flame text-ink'
+                    : 'text-cream/60 hover:text-cream'
+                }`}
+              >
+                {labels[range]}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
