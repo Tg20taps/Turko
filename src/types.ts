@@ -91,6 +91,7 @@ export type Order = {
   total: number;
   handledBy?: string | null;
   items: OrderItem[];
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
 };

@@ -40,6 +40,7 @@ function mapSupabaseOrder(row: any): Order {
     status: row.status,
     total: row.total,
     handledBy: row.handled_by,
+    isArchived: !!row.is_archived,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     items: (row.order_items ?? []).map((item: any) => ({
@@ -69,6 +70,7 @@ export async function createOrder(customer: CheckoutCustomer, lines: CartLine[])
     total,
     handledBy: null,
     items: orderItems,
+    isArchived: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -118,18 +120,27 @@ export async function createOrder(customer: CheckoutCustomer, lines: CartLine[])
   return order;
 }
 
-export async function getOrders(): Promise<Order[]> {
+export async function getOrders(includeArchived = false): Promise<Order[]> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
+    let query = supabase
       .from('orders')
-      .select('*, order_items(*)')
-      .order('created_at', { ascending: false });
+      .select('*, order_items(*)');
+
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
     return (data ?? []).map(mapSupabaseOrder);
   }
 
-  return readLocalOrders();
+  const localOrders = readLocalOrders();
+  if (!includeArchived) {
+    return localOrders.filter((order) => !order.isArchived);
+  }
+  return localOrders;
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus, changedBy?: string) {
@@ -154,4 +165,20 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus, ch
     order.id === orderId ? { ...order, status, updatedAt: new Date().toISOString(), handledBy: changedBy } : order,
   );
   writeLocalOrders(orders);
+}
+
+export async function archiveActiveOrders() {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase
+      .from('orders')
+      .update({ is_archived: true, updated_at: new Date().toISOString() })
+      .eq('is_archived', false);
+    if (error) throw error;
+    return;
+  }
+
+  const archived = readLocalOrders().map((order) =>
+    order.isArchived ? order : { ...order, isArchived: true, updatedAt: new Date().toISOString() }
+  );
+  writeLocalOrders(archived);
 }

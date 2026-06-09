@@ -10,7 +10,7 @@ export function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getOrders()
+    getOrders(true)
       .then(setOrders)
       .finally(() => setIsLoading(false));
   }, []);

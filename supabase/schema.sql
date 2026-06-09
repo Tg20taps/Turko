@@ -39,6 +39,7 @@ create table if not exists public.orders (
     status in ('pendiente', 'tomado', 'en_preparacion', 'listo_retiro', 'entregado', 'cancelado')
   ),
   total int not null check (total >= 0),
+  is_archived boolean default false,
   handled_by uuid references auth.users(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
